@@ -1,0 +1,110 @@
+function main() {
+  // return;
+  // DO NOT MODIFY OR REMOVE THIS SCRIPT - LA
+  
+  // defining #basics
+  var primaryAffArray = [];
+  var secondaryAffArray = [];
+  var recipient = "luke.anderson@bet365.com";
+  var recipients = "luke.anderson@bet365.com, Neil.Fairweather@bet365.com, Christopher.Taylor@bet365.com, Nicholas.Potts@bet365.com";
+  var errorSubject = "Error: CvR by Hour Script " + AdWordsApp.currentAccount().getName();
+  var successSubject = "Success: CvR by Hour Script " + AdWordsApp.currentAccount().getName();
+  
+  // date configs
+  var nowDate = Utilities.formatDate(new Date(), "Europe/London", "dd/MM/yy HH:mm:ss");
+  var nowHour = Utilities.formatDate(new Date(), "Europe/London", "HH");
+  var nowHourInt = parseInt(nowHour, 10).toFixed();
+  Logger.log("\nCurrent time is: " + nowDate + " Current hour is: " + nowHour + "\n");
+  
+  primaryAffArray[0] = '{lpurl}?{ifmobile:affiliate=365_688253}{ifnotmobile:affiliate=365_688277}';
+  primaryAffArray[1] = '{lpurl}?{ifmobile:affiliate=365_688254}{ifnotmobile:affiliate=365_688278}';
+  primaryAffArray[2] = '{lpurl}?{ifmobile:affiliate=365_688255}{ifnotmobile:affiliate=365_688279}';
+  primaryAffArray[3] = '{lpurl}?{ifmobile:affiliate=365_688256}{ifnotmobile:affiliate=365_688280}';
+  primaryAffArray[4] = '{lpurl}?{ifmobile:affiliate=365_688257}{ifnotmobile:affiliate=365_688281}';
+  primaryAffArray[5] = '{lpurl}?{ifmobile:affiliate=365_688258}{ifnotmobile:affiliate=365_688282}';
+  primaryAffArray[6] = '{lpurl}?{ifmobile:affiliate=365_688259}{ifnotmobile:affiliate=365_688283}';
+  primaryAffArray[7] = '{lpurl}?{ifmobile:affiliate=365_688260}{ifnotmobile:affiliate=365_688284}';
+  primaryAffArray[8] = '{lpurl}?{ifmobile:affiliate=365_688261}{ifnotmobile:affiliate=365_688285}';
+  primaryAffArray[9] = '{lpurl}?{ifmobile:affiliate=365_688262}{ifnotmobile:affiliate=365_688286}';
+  primaryAffArray[10] = '{lpurl}?{ifmobile:affiliate=365_688263}{ifnotmobile:affiliate=365_688287}';
+  primaryAffArray[11] = '{lpurl}?{ifmobile:affiliate=365_688264}{ifnotmobile:affiliate=365_688288}';
+  primaryAffArray[12] = '{lpurl}?{ifmobile:affiliate=365_688265}{ifnotmobile:affiliate=365_688289}';
+  primaryAffArray[13] = '{lpurl}?{ifmobile:affiliate=365_688266}{ifnotmobile:affiliate=365_688290}';
+  primaryAffArray[14] = '{lpurl}?{ifmobile:affiliate=365_688267}{ifnotmobile:affiliate=365_688291}';
+  primaryAffArray[15] = '{lpurl}?{ifmobile:affiliate=365_688268}{ifnotmobile:affiliate=365_688292}';
+  primaryAffArray[16] = '{lpurl}?{ifmobile:affiliate=365_688269}{ifnotmobile:affiliate=365_688293}';
+  primaryAffArray[17] = '{lpurl}?{ifmobile:affiliate=365_688270}{ifnotmobile:affiliate=365_688294}';
+  primaryAffArray[18] = '{lpurl}?{ifmobile:affiliate=365_688271}{ifnotmobile:affiliate=365_688295}';
+  primaryAffArray[19] = '{lpurl}?{ifmobile:affiliate=365_688272}{ifnotmobile:affiliate=365_688296}';
+  primaryAffArray[20] = '{lpurl}?{ifmobile:affiliate=365_688273}{ifnotmobile:affiliate=365_688297}';
+  primaryAffArray[21] = '{lpurl}?{ifmobile:affiliate=365_688274}{ifnotmobile:affiliate=365_688298}';
+  primaryAffArray[22] = '{lpurl}?{ifmobile:affiliate=365_688275}{ifnotmobile:affiliate=365_688299}';
+  primaryAffArray[23] = '{lpurl}?{ifmobile:affiliate=365_688276}{ifnotmobile:affiliate=365_688300}';
+  secondaryAffArray[0] = '{lpurl}?{ifmobile:affiliate=365_688301}{ifnotmobile:affiliate=365_688325}';
+  secondaryAffArray[1] = '{lpurl}?{ifmobile:affiliate=365_688302}{ifnotmobile:affiliate=365_688326}';
+  secondaryAffArray[2] = '{lpurl}?{ifmobile:affiliate=365_688303}{ifnotmobile:affiliate=365_688327}';
+  secondaryAffArray[3] = '{lpurl}?{ifmobile:affiliate=365_688304}{ifnotmobile:affiliate=365_688328}';
+  secondaryAffArray[4] = '{lpurl}?{ifmobile:affiliate=365_688305}{ifnotmobile:affiliate=365_688329}';
+  secondaryAffArray[5] = '{lpurl}?{ifmobile:affiliate=365_688306}{ifnotmobile:affiliate=365_688330}';
+  secondaryAffArray[6] = '{lpurl}?{ifmobile:affiliate=365_688307}{ifnotmobile:affiliate=365_688331}';
+  secondaryAffArray[7] = '{lpurl}?{ifmobile:affiliate=365_688308}{ifnotmobile:affiliate=365_688332}';
+  secondaryAffArray[8] = '{lpurl}?{ifmobile:affiliate=365_688309}{ifnotmobile:affiliate=365_688333}';
+  secondaryAffArray[9] = '{lpurl}?{ifmobile:affiliate=365_688310}{ifnotmobile:affiliate=365_688334}';
+  secondaryAffArray[10] = '{lpurl}?{ifmobile:affiliate=365_688311}{ifnotmobile:affiliate=365_688335}';
+  secondaryAffArray[11] = '{lpurl}?{ifmobile:affiliate=365_688312}{ifnotmobile:affiliate=365_688336}';
+  secondaryAffArray[12] = '{lpurl}?{ifmobile:affiliate=365_688313}{ifnotmobile:affiliate=365_688337}';
+  secondaryAffArray[13] = '{lpurl}?{ifmobile:affiliate=365_688314}{ifnotmobile:affiliate=365_688338}';
+  secondaryAffArray[14] = '{lpurl}?{ifmobile:affiliate=365_688315}{ifnotmobile:affiliate=365_688339}';
+  secondaryAffArray[15] = '{lpurl}?{ifmobile:affiliate=365_688316}{ifnotmobile:affiliate=365_688340}';
+  secondaryAffArray[16] = '{lpurl}?{ifmobile:affiliate=365_688317}{ifnotmobile:affiliate=365_688341}';
+  secondaryAffArray[17] = '{lpurl}?{ifmobile:affiliate=365_688318}{ifnotmobile:affiliate=365_688342}';
+  secondaryAffArray[18] = '{lpurl}?{ifmobile:affiliate=365_688319}{ifnotmobile:affiliate=365_688343}';
+  secondaryAffArray[19] = '{lpurl}?{ifmobile:affiliate=365_688320}{ifnotmobile:affiliate=365_688344}';
+  secondaryAffArray[20] = '{lpurl}?{ifmobile:affiliate=365_688321}{ifnotmobile:affiliate=365_688345}';
+  secondaryAffArray[21] = '{lpurl}?{ifmobile:affiliate=365_688322}{ifnotmobile:affiliate=365_688346}';
+  secondaryAffArray[22] = '{lpurl}?{ifmobile:affiliate=365_688323}{ifnotmobile:affiliate=365_688347}';
+  secondaryAffArray[23] = '{lpurl}?{ifmobile:affiliate=365_688324}{ifnotmobile:affiliate=365_688348}';
+  
+  
+  var primaryAdGroupsArr = ['46100845178', '46100845138'];
+  var secondaryAdGroupsArr = ['44581401356', '44581401316'];
+  
+  // (New) 0001 *Brand* - UK - Exact = 886677577
+  // (New) 0005 *Brand* Position 2 - UK - Exact = 887709300
+  
+  var primaryCampaign = AdWordsApp.campaigns().withIds(['886677577']).get().next();
+  var secondaryCampaign = AdWordsApp.campaigns().withIds(['887709300']).get().next();
+  
+  var primaryAdGroups = primaryCampaign.adGroups().withIds(primaryAdGroupsArr).get();
+  var secondaryAdGroups = secondaryCampaign.adGroups().withIds(secondaryAdGroupsArr).get();
+  
+  // sets the new tracking template to the one in the array associated with the current hour
+  var primaryTrackingTempNew = primaryAffArray[nowHourInt];
+  var secondaryTrackingTempNew = secondaryAffArray[nowHourInt];
+  
+  while (primaryAdGroups.hasNext()) {
+    // changed this to set tracking templates at adgroup level, so it doesnt cause any ad review changes
+    var adGroup = primaryAdGroups.next();
+    
+    try {
+      Logger.log("\nChanging AdGroup: %s Tracking Template from: %s to: %s", adGroup.getName(), adGroup.urls().getTrackingTemplate(), primaryTrackingTempNew);
+      adGroup.urls().setTrackingTemplate(primaryTrackingTempNew);
+    }
+    catch (err) {
+      MailApp.sendEmail("luke.anderson@bet365.com", "URGENT - ERROR: Brand CvR Script", Logger.getLog() + "\n\n" + err)
+    }
+  }
+  
+  while (secondaryAdGroups.hasNext()) {
+    // changed this to set tracking templates at adgroup level, so it doesnt cause any ad review changes
+    var adGroup = secondaryAdGroups.next();
+    
+    try {
+      Logger.log("\nChanging AdGroup: %s Tracking Template from: %s to: %s", adGroup.getName(), adGroup.urls().getTrackingTemplate(), secondaryTrackingTempNew);
+      adGroup.urls().setTrackingTemplate(secondaryTrackingTempNew);
+    }
+    catch (err) {
+      MailApp.sendEmail("luke.anderson@bet365.com", "URGENT - ERROR: Brand CvR Script", Logger.getLog() + "\n\n" + err)
+    }
+  }
+}

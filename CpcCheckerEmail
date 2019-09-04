@@ -1,0 +1,97 @@
+/********
+*
+* Hourly CPC Checker
+* This script will email recipients If CPC Exceed Max CPC
+* Specify Campaigns
+* Version: 1.02
+* Date: 30/08/2017
+* Author: Nicholas Potts
+* On behalf of bet365.com.
+*
+********/
+
+function main() {
+  
+  var emailList = "nicholas.potts@bet365.com, christopher.taylor@bet365.com"; 
+  var campaignName1 = "(N) 0001 *Brand* - UK - Exact";
+  var maxCpc = 0.50; 
+  var arr = [];
+  var arr1 = [];
+  var camparr = [];
+  var now = todaysDate().toString().substring(15,18);
+  now = now - 1; 
+    
+  var emailHeader = ["Account Name", "Campaign Name", "AdGroup Name", "Hour Of Day", "Average CPC", "Clicks", "Cost"]; 
+  var emailQuotaRemaining = MailApp.getRemainingDailyQuota();
+   
+  var accountName = AdWordsApp.currentAccount().getName();
+  var accountCost = AdWordsApp.currentAccount().getStatsFor('TODAY').getCost();
+  
+  var report = AdWordsApp.report("SELECT CampaignName, AdGroupName, HourOfDay, Clicks, Cost, AverageCpc " +
+                                 "FROM ADGROUP_PERFORMANCE_REPORT " +
+                                 "WHERE CampaignName = '" + campaignName1 + "' " +              
+                                 "DURING TODAY " );
+  
+  var rows = report.rows();
+  while (rows.hasNext()) {
+    var row = rows.next();
+    var account = row['AccountName']
+    var campaign = row['CampaignName'];
+    var adgroup = row['AdGroupName'];
+    var HourOfDay = row['HourOfDay'];
+    var clicks = row['Clicks'];
+    var cost = row['Cost'];
+    var cpc = row['AverageCpc']; 
+    var HourOfDay = HourOfDay.toString();
+    
+    var campaignIterator = AdWordsApp.campaigns()
+    .withCondition("Name = '" + campaignName1 + "' ")
+    .get();
+    
+     var campaignItera = campaignIterator.next();
+     var totalCost = campaignItera.getStatsFor('TODAY').getCost();
+    
+    if(now == HourOfDay && cpc >= maxCpc){
+      arr = [accountName, campaign, adgroup, HourOfDay, cpc, clicks, cost];
+      arr1.push('<tr class="tableRowBold">');
+      arr1.push('<td>'+arr.join('</td><td>')+'</td>');
+      arr1.push('</tr>');
+  }   
+}       
+
+  if(arr.length >= 1){
+var html = [];
+    html.push('<html><head><style>',
+              '.tableRowBold {font-weight: normal; font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #fffff; border: 1px solid black}',
+              '.tableColor {font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #fffff; border: 1px solid black}',
+              'th {font: 12pt arial; text-align: left; border: 1px solid black; background-color: #ddd; padding: 2px 2px 2px 2px}',
+              'td {text-align: left; border: 1px solid black}',
+              'span {font: 14pt arial;}',
+              'p {margin: 3px 3px 3px 3px; font: 10pt arial;}',
+              '</style></head>',
+              '<body>',
+              '<table><tr><th>', emailHeader.join('</th><th>'), '</th></tr>', arr1.join(''), '</table></ br></ br>',
+              '<p><STRONG>Campaign (N) 0001 *Brand* - UK - Exact Total Spend Today: £', totalCost, '</STRONG></p>',
+              '<p><STRONG>Total Account Spend: £', accountCost, '</STRONG></p>',
+              '<p><STRONG>Remaining Email Quota: ', emailQuotaRemaining, '</STRONG></p>',
+              '</body>',
+              '</html>'
+             );       
+    MailApp.sendEmail({
+      to: emailList,
+      bcc: '',
+      name: 'CPC By Hour Alert',
+      subject: accountName + ' | CPC By Hour Alert',
+      htmlBody: html.join('\n'),
+    });
+    Logger.log("Email Sent: " + Utilities.formatDate(new Date(), AdWordsApp.currentAccount().getTimeZone(), 'MMMM dd, yyyy HH:mm:ss Z'));
+  } else {
+    Logger.log("Account Name: " + accountName + " | " + "Hour of day: " + HourOfDay + " | " + "CPC: " + cpc + " | " + "Cpcs below target!");
+  }
+}
+function todaysDate(){ 
+ var date = new Date(); 
+ var timeZone = AdWordsApp.currentAccount().getTimeZone(); 
+  return new Date(Utilities.formatDate(date, timeZone, 'dd/MM/yy HH:mm:ss'));
+}
+

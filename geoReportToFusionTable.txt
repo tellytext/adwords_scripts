@@ -1,0 +1,69 @@
+/* to do:
+- create new table
+- handle report returning 0
+prior to second function
+- can whole array be passed to fusion table,
+iterating through each element time consuming
+*/ 
+
+function main(){
+  var dateRange = "YESTERDAY";
+  var tableID = '1Ha_Ndhi33IPznNeav4uVw28-75iZaPparKxtNYPe';
+  
+  var report = getReportData(dateRange)
+  insertDataIntoFusionTable(tableID, report)
+}
+
+function getReportData(dateRange){
+  
+  var data = new Array();
+  var cols = getReportColumns();
+  var query = ['SELECT', cols.join(', '), 'FROM GEO_PERFORMANCE_REPORT',
+               'WHERE Clicks >= 200', 
+               'DURING', dateRange].join(' ');
+  
+  var reportIter = AdWordsApp.report(query).rows();
+  
+  while(reportIter.hasNext()){
+    var row = reportIter.next();
+    var date = row['Date'];
+    var countryCriteriaId = row['CountryCriteriaId'];
+    var regionCriteriaId = row['RegionCriteriaId'];
+    var mostSpecificCriteriaId = row['MostSpecificCriteriaId'];
+    var cityCriteriaId = row['MostSpecificCriteriaId'];
+    var impressions = row['Impressions'];
+    var clicks = row['Clicks'];
+    var cost = row['Cost'];
+    var avgCPC = row['AverageCpc'];
+    var avgPosition = row['AveragePosition'];
+    
+    data.push([countryCriteriaId, regionCriteriaId, mostSpecificCriteriaId, cityCriteriaId, date, clicks, impressions, cost, avgCPC, avgPosition])
+  }
+
+  return data;
+}
+
+function getReportColumns(){
+  return ['Date','CampaignName',
+          'CountryCriteriaId','RegionCriteriaId','MostSpecificCriteriaId','CityCriteriaId',
+          'Impressions','Clicks','Cost',
+          'AverageCpc', 'AveragePosition'];
+}
+
+function insertDataIntoFusionTable(tableID, reportData){
+  if(reportData.length != 0){
+    try{
+      for(var x = 0; x < reportData.length; x++){
+        var report = reportData[x]
+        var data = Utilities.newBlob(report.join());
+        data.setContentType('application/octet-stream');
+        FusionTables.Table.importRows(tableID, data);
+      }
+      Logger.log('Data imported successfully into Fusion Table.');
+    } catch(err){
+      Logger.log('Error inserting data: ', err);  
+    }
+  } else {
+    Logger.log('No data to import to Fusion Table. Try adjusting report query.'); 
+}
+}

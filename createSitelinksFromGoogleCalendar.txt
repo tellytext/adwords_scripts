@@ -1,0 +1,113 @@
+// testmytestface
+
+function main(){
+  var events = listAllEventsForToday();
+  var arr = new Array;
+  
+  for(var i = 0; i < events.length; i++ ){
+    var event = events[i][0];
+    var description = events[i][1];
+//    arr = event.split('\n')
+//    Logger.log(arr);
+//    var fixture = arr[0];
+//    var stadium = arr[1];
+//    var location = arr[2];
+//    var tournament = arr[3];
+    var startTime = events[i][2];
+    var endTime = events[1][3];
+     
+    startTime = new Date(startTime);
+    var year = JSON.stringify(startTime.getFullYear());
+    var month = JSON.stringify(startTime.getMonth() + 1);
+    var date = JSON.stringify(startTime.getDate()); 
+      
+    if(month < 10){
+      var  startDate = year.concat(0, month, date).toString(); 
+      Logger.log(startDate);
+    } else {
+      var startDate = year.concat(month, date).toString();
+      Logger.log(startDate);
+    }
+     
+    var sitelinkBuilder = AdWordsApp.extensions().newSitelinkBuilder();
+    var newSitelink = sitelinkBuilder
+    .withLinkText(event.toString())
+    .withDescription1('Bet on 2018 World Cup.')
+    .withDescription2('Get the Latest Odds Now at bet365™.')
+    .withFinalUrl('www.bet365.com/dl/~offer')
+    .withMobileFinalUrl('www.bet365.com/dl/~offer')
+    .withStartDate(startDate)
+    .withEndDate(startDate)
+    .withMobilePreferred(false)
+    .build();
+    
+    Logger.log("Sitelink created.");
+    
+    var campaignIterator = AdWordsApp.campaigns()
+    .withCondition('Name = "(New) BetBright Long Tail - BMM"')
+    .get();
+    while (campaignIterator.hasNext()) {
+      var campaign = campaignIterator.next();
+      campaign.addSitelink(newSitelink);
+    Logger.log("Sitelink associated.");
+    }    
+  }
+}
+
+
+function getListOfAllCalendars(){
+  var calendarList = Calendar.CalendarList.list();
+  for (var i = 0; i < calendarList.items.length; i++) {
+    var calendar = calendarList.items[i];
+    Logger.log('%s, %s', calendar.id, calendar.description);
+  }
+}
+
+function listAllEventsForToday(){
+  var calendarId = 'bphso965blgpbtaiq1k8vc65kl41aa8q@import.calendar.google.com';
+  var now = new Date();
+  now.setDate(now.getDate() + 28);  
+  
+  var startOfToday = new Date(now.getYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  var endOfToday = new Date(now.getYear(), now.getMonth(), now.getDate(), 23, 59, 59); 
+  
+  var calendarEvents = Calendar.Events.list(calendarId, {
+    timeMin: startOfToday.toISOString(),
+    timeMax: endOfToday.toISOString(), 
+    singleEvents: true, 
+    orderBy: 'startTime'
+  });
+  
+  var eventArray = new Array(); 
+  
+  if (calendarEvents.items && calendarEvents.items.length > 0){
+    for (var i = 0; i < calendarEvents.items.length; i++){
+      var calendarEvent = calendarEvents.items[i];
+      if (calendarEvent.start.date){
+        var start = calendarEvent.start.date;
+      } else {
+        var startTime = calendarEvent.start.dateTime;
+        var endTime = calendarEvent.end.dateTime;
+        var event = calendarEvent.summary;
+        var description = calendarEvent.description;
+//        var tournament = calendarEvent.organizer.displayName;
+//        var location = calendarEvent.location;
+        eventArray.push([event, description, startTime, endTime])
+      }
+    }
+    return eventArray;
+  } else {
+   Logger.log("No events found for %s ", startOfToday);  
+  }
+    
+}
+
+
+
+function formatDateTimezone(d){
+  var date = new Date(d);
+  var year = date.getFullYear();
+  var timeZone = AdWordsApp.currentAccount().getTimeZone();
+  date = Utilities.formatDate(date, timeZone, 'yyyy/MM/dd HH:mm:ssZ');
+  return date; 
+}

@@ -1,0 +1,364 @@
+// sets date configurations and accounts for timezone
+var today = new Date();
+today.setTime(today.getTime() + today.getTimezoneOffset()*60*1000);
+
+var firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+var lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+var yesterday = new Date(today.getFullYear(), today.getMonth(), (today.getDate() - 1));
+var daysSoFar = yesterday.getDate();
+
+// making sure we avoid selecting a date of 0 therefore rolling back to the previous month
+var toDateInt = (today.getDate() - 1) ? (today.getDate() - 1) : 1;
+var toDateString = new Date(today.getFullYear(), today.getMonth(), toDateInt);
+var longMonth = Utilities.formatDate(today, "Europe/London", "MMMM");
+var fromDateYYYYMMDD = Utilities.formatDate(firstDayOfMonth, "Europe/London", "YYYYMMdd");
+var toDateYYYYMMDD = Utilities.formatDate(toDateString, "Europe/London", "YYYYMMdd");
+
+function main() {
+  
+  if ((new Date()).getDate() === 1) {
+    Logger.log("First day of month - not running script, %s", (new Date).getDate())
+    return;
+  }
+
+  if(Utilities.formatDate(new Date(), "Europe/London", "u") != "6" && Utilities.formatDate(new Date(), "Europe/London", "u") != "7") {
+    Logger.log("Date is not Saturday or Sunday, not executing");
+    return;
+  }
+  
+  var recipients = [
+    "Luke.Anderson@bet365.com",
+    "Nicholas.Potts@bet365.com",
+    "Christopher.Taylor@bet365.com",
+    "Neil.Fairweather@bet365.com",
+    "Diego.Lavatelli@bet365.com",
+    "Mark.Trapani@bet365.com", 
+    "Ezza.Ayoubi@bet365.com",
+    "Ulrik.Haack-Pedersen@bet365.com",
+    "Danelle.Azzopardi@bet365.com",
+    "Francesco.Corica@bet365.com",
+    "AnnalisaDe.Michele@bet365.com",
+    "Alberto.Prete@bet365.com",
+    "Laura.Fernandez@bet365.com",
+    "Alice.Ferri@bet365.com", 
+    "Lauren.Farrell@bet365.com",
+    "James.Woods@bet365.com"
+  ];
+  
+  recipients = recipients.join(",");
+  
+  // var recipients = "Luke.Anderson@bet365.com";
+  
+  Logger.log("Using dates: " + firstDayOfMonth + " to: " + yesterday);
+  Logger.log("Using month budget %s", longMonth);
+  
+  var setBudgetURL = "<a href='https://docs.google.com/spreadsheets/d/1lkrAfBx2Vo5k6xYAYQ7SsqD-MmXEP3ntxXFsBcvwczI/edit#gid=2119956026'>Set budget</a>";
+  var yesterdayTh = ["Account Name", "Account ID", "Impressions", "Clicks", "Spend", "CTR", "CPC"];
+  var mtdTh = ["Account Name", "Spend", "Budget", "% Budget Spent", "Exp. Spend", "Exp. Over/Under Spend", "Budget MTD Pacing", "ADS", "RDS"];
+  
+  // get the budgets and account groupings
+  var groupings = getGroupings();
+  // get account stats
+  var yesterdayStats = getYesterdayStats();
+  var mtdStats = getMtdStats();
+  
+  Logger.log(groupings)
+  
+  // loop through the budget lines and create the budget metrics
+  // combine spend for relevant accounts in groupings
+  for (var budgetLine in groupings) { 
+    var spend=0;
+    var accounts = groupings[budgetLine]['accountIDs'];
+
+    for (var account in accounts) {
+      var accountID = accounts[account];
+      if (accounts.length === 1) {
+        spend = mtdStats[accountID]['spend'];
+        continue;
+      }
+      else {
+        spend += mtdStats[accountID]['spend'];
+      }
+    }
+    
+    groupings[budgetLine]['mtdBudgetSpend'] = spend.toFixed();
+    
+    if (groupings[budgetLine]['budgets'][longMonth] === (undefined || '')) {
+      Logger.log("Could not find budget for budget line %s", budgetLine);
+      groupings[budgetLine]['pecentSpent'] = setBudgetURL;
+      groupings[budgetLine]['expectedSpend'] = setBudgetURL;
+      groupings[budgetLine]['expectedUnderSpend'] = setBudgetURL;
+      groupings[budgetLine]['proRataOverUnder'] = setBudgetURL;
+      groupings[budgetLine]['averageDailySpend'] = setBudgetURL;
+      groupings[budgetLine]['remainingDailySpend'] = setBudgetURL;
+      continue;
+    }
+    
+    var monthBudget = groupings[budgetLine]['budgets'][longMonth];
+    var monthSpend = groupings[budgetLine]['mtdBudgetSpend'];
+    
+    groupings[budgetLine]['pecentSpent'] = ((monthSpend/monthBudget) * 100);
+    groupings[budgetLine]['expectedSpend'] = ((monthSpend/daysSoFar) * lastDayOfMonth);
+    groupings[budgetLine]['expectedUnderSpend'] = (monthBudget - ((monthSpend/daysSoFar)*lastDayOfMonth));
+    groupings[budgetLine]['proRataOverUnder'] = ((monthSpend/((monthBudget/lastDayOfMonth)*daysSoFar))*100);
+    groupings[budgetLine]['averageDailySpend'] = (monthSpend/daysSoFar);
+    groupings[budgetLine]['remainingDailySpend'] = ((monthBudget - monthSpend) / (lastDayOfMonth - daysSoFar));  
+  }
+  
+  // all data required is now organised in groupings and yesterday/mtd
+  var mtdBudgetTable = [];
+  
+  for (var budgetLine in groupings) {
+
+    var arr = [
+      formatNumber(groupings[budgetLine]['mtdBudgetSpend'],true), 
+      formatNumber(groupings[budgetLine]['budgets'][longMonth],true),
+      groupings[budgetLine]['pecentSpent'].toFixed(0) + "%",
+      formatNumber(groupings[budgetLine]['expectedSpend'],true),
+      formatNumber(groupings[budgetLine]['expectedUnderSpend'],true),
+      groupings[budgetLine]['proRataOverUnder'].toFixed(0) + "%",
+      formatNumber(groupings[budgetLine]['averageDailySpend'],true),
+      formatNumber(groupings[budgetLine]['remainingDailySpend'],true)
+    ];
+    
+    mtdBudgetTable.push('<tr class="tableRowBold">');
+    mtdBudgetTable.push('<td><strong>' + budgetLine + '</strong></td>');
+    mtdBudgetTable.push('<td>'+arr.join('</td><td>')+'</td>');
+    mtdBudgetTable.push('</tr>');
+    
+    for (var accountIndex in groupings[budgetLine]['accountIDs']) {
+      
+      var accountID = groupings[budgetLine]['accountIDs'][accountIndex];
+      
+      var arr = [
+        mtdStats[accountID]['accountName'],
+        formatNumber(mtdStats[accountID]['spend'],true),
+        ((mtdStats[accountID]['spend']/groupings[budgetLine]['budgets'][longMonth])*100).toFixed(0) + "%"
+      ];
+      
+      mtdBudgetTable.push('<tr class="tableColor">');
+      mtdBudgetTable.push('<td>'+arr.join('</td><td>')+'</td>');
+      mtdBudgetTable.push('</tr>');
+    }
+  }
+  
+  Logger.log(mtdStats);
+  
+  var mtdTable = [];
+  var yesterdayTable = [];
+  var alertsMtd = [];
+  var alertsYesterday = [];
+  
+  for (var account in mtdStats) {
+    
+    if (mtdStats[account]['spend'] === 0) {
+      Logger.log("Account %s has spent zero MTD", account);
+      alertsMtd.push(mtdStats[account]['accountName'] + " - " + mtdStats[account]['accountId']);
+      continue;
+    }
+    var arr = [
+      mtdStats[account]['accountName'],
+      mtdStats[account]['accountId'],
+      formatNumber(mtdStats[account]['impressions'],false),
+      formatNumber(mtdStats[account]['clicks'],false),
+      formatNumber(mtdStats[account]['spend'],true),
+      ((mtdStats[account]['clicks']/mtdStats[account]['impressions'])*100).toFixed(0)+"%",
+      formatNumber((mtdStats[account]['spend']/mtdStats[account]['clicks']),true)      
+    ];
+    mtdTable.push('<tr class="tableColor">');
+    mtdTable.push('<td>'+arr.join('</td><td>')+'</td>');
+    mtdTable.push('</tr>');
+  }
+
+  for (var account in yesterdayStats) {
+    
+    if (yesterdayStats[account]['spend'] === 0) {
+      Logger.log("Account %s has spent zero MTD", account);
+      alertsYesterday.push(yesterdayStats[account]['accountName'] + " - " + yesterdayStats[account]['accountId']);
+      continue;
+    }
+    var arr = [
+      yesterdayStats[account]['accountName'],
+      yesterdayStats[account]['accountId'],
+      formatNumber(yesterdayStats[account]['impressions'],false),
+      formatNumber(yesterdayStats[account]['clicks'],false),
+      formatNumber(yesterdayStats[account]['spend'],true),
+      ((yesterdayStats[account]['clicks']/yesterdayStats[account]['impressions'])*100).toFixed(0)+"%",
+      formatNumber((yesterdayStats[account]['spend']/yesterdayStats[account]['clicks']),true)
+    ]; 
+    yesterdayTable.push('<tr class="tableColor">');
+    yesterdayTable.push('<td>'+arr.join('</td><td>')+'</td>');
+    yesterdayTable.push('</tr>');
+  }
+  
+  var html = [];
+  
+  html.push(
+    '<html><head><style>',
+    '.tableRowBold {font-weight: bold; font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ddd; border: 1px solid black}',
+    '.tableColor {font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ffffff; border: 1px solid black}',
+    'th {font: 12pt arial; text-align: left; border: 1px solid black; background-color: #ddd; padding: 2px 2px 2px 2px}',
+    'td {text-align: left; border: 1px solid black}',
+    'span {font: 14pt arial;}',
+    'p {font: 10pt arial;}',
+    '</style></head>',
+    '<body>',
+    
+    '<div><span>Month to date - ', Utilities.formatDate(firstDayOfMonth, "Europe/London", "dd/MM/YYYY"), "-" , Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY"),'</span></div>',
+    '<table><tr><th>', mtdTh.join('</th><th>'), '</th></tr>', mtdBudgetTable.join(''), '</table>',
+    
+    '</br>', 
+    '<div><span>Month to date - ', Utilities.formatDate(firstDayOfMonth, "Europe/London", "dd/MM/YYYY"), "-" , Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY"),'</span></div>',
+    '<table><tr><th>', yesterdayTh.join('</th><th>'), '</th></tr>', mtdTable.join(''), '</table>',    
+    
+    '</br>',
+    '<div><span>Yesterday - ', Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY") , '</span></div>',
+    '<table><tr><th>', yesterdayTh.join('</th><th>'), '</th></tr>', yesterdayTable.join(''), '</table>',
+    
+    
+    '<div><p><strong>Accounts with zero spend MTD:</strong><br>' + alertsMtd.join('<br>') + '</p><div>',
+    '<div><p><strong>Accounts with zero spend yesterday:</strong><br>' + alertsYesterday.join('<br>') + '</p><div>',
+    
+    setBudgetURL,
+    '</body>',
+    '</html>'
+  );
+  
+  if (!AdWordsApp.getExecutionInfo().isPreview()) {
+    try {
+      MailApp.sendEmail({
+        to: recipients,
+        subject: "MCC Summary Report",
+        htmlBody: html.join('\n'),
+      });
+      
+      Logger.log("MCC Report Sent");
+    }
+    catch(err) {
+      Logger.log("Error with email: " + err);
+    }
+  }
+}
+
+function getYesterdayStats() {
+  
+  var accountIterator = MccApp.accounts().forDateRange("YESTERDAY").orderBy('Cost DESC').get();
+  var yesterdayObj = {};
+  
+  while (accountIterator.hasNext()) {
+    var obj = {}
+    var account = accountIterator.next();
+    var stats = account.getStatsFor("YESTERDAY");
+    
+    var obj = {
+      'accountId':account.getCustomerId(),
+      'accountName':account.getName(),
+      'impressions':stats.getImpressions(),
+      'spend':stats.getCost(),
+      'clicks':stats.getClicks()
+    };
+
+    yesterdayObj[account.getCustomerId()] = obj;
+  }
+  
+  return yesterdayObj;
+}
+
+function getMtdStats() {
+
+  var accountIterator = MccApp.accounts().forDateRange("THIS_MONTH").orderBy('Cost DESC').get();
+  var mtdObj = {};
+  
+  while (accountIterator.hasNext()) {
+    var obj = {};
+    var account = accountIterator.next();
+    var stats = account.getStatsFor(fromDateYYYYMMDD, toDateYYYYMMDD);
+    
+    var obj = {
+      'accountId':account.getCustomerId(),
+      'accountName':account.getName(),
+      'impressions':stats.getImpressions(),
+      'spend':stats.getCost(),
+      'clicks':stats.getClicks()
+    };
+    
+    mtdObj[account.getCustomerId()] = obj;
+  }
+  return mtdObj;  
+}
+
+function filterEmpties(indexToFilter) {
+  return function (element, index) {
+    return (element[indexToFilter] !== (undefined || ''));
+  }
+}
+
+function getGroupings() {
+
+  var ssUrl = "https://docs.google.com/spreadsheets/d/1lkrAfBx2Vo5k6xYAYQ7SsqD-MmXEP3ntxXFsBcvwczI/edit#gid=2140844725";
+  var budgetSheetName = ("Google");
+  var ss = SpreadsheetApp.openByUrl(ssUrl);
+  var budgetSheet = ss.getSheetByName(budgetSheetName);
+  var budgetGroups = ss.getRangeByName("BudgetNames").getValues();
+  budgetGroups = budgetGroups.filter(filterEmpties(1));
+  
+  var budgets = ss.getRangeByName("Budgets").getValues();
+  budgets = budgets.filter(filterEmpties(1));
+  
+  var obj = {};
+  
+  for (var i=1; i<budgets.length;i++) {
+    
+    var budgetLine = budgets[i][0];
+    var accountIDs = budgets[i][1];
+    
+    obj[budgetLine] = {};
+    obj[budgetLine]['accountIDs'] = accountIDs.split(',');
+    
+    var tempObj = {};
+    
+    for (var x=0; x<budgets[0].length-2; x++) {
+      var y=x+2;
+      tempObj[budgets[0][y]] = budgets[i][y];
+    };
+    
+    obj[budgetLine]['budgets'] = tempObj;
+  }
+  return obj;
+}
+
+function formatNumber(number, isCurrency) {
+  
+  var thousandsSeparator = ",";
+  var currencySymbol = "£";
+  var decimalMark = ".";
+  
+  if (typeof number !== 'number') {
+    number = parseFloat(number);
+  }
+  
+  if (number < 0) {
+    var formattedNumber = Math.abs(number);
+    
+    if (isCurrency) {
+      formattedNumber = formattedNumber.toFixed(2);
+      formattedNumber = formattedNumber.substr(0,formattedNumber.length-3);
+      formattedNumber = formattedNumber.split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator);
+      formattedNumber = currencySymbol + formattedNumber + decimalMark + number.toFixed(2).substr(-2);
+    } else {
+      formattedNumber = formattedNumber.toFixed(0).split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator); 
+    }
+    return "over " + formattedNumber;
+  }
+  else {
+    if (isCurrency) {
+      var formattedNumber = number.toFixed(2);
+      formattedNumber = formattedNumber.substr(0,formattedNumber.length-3);
+      formattedNumber = formattedNumber.split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator);
+      formattedNumber = currencySymbol + formattedNumber + decimalMark + number.toFixed(2).substr(-2);
+    } else {
+      var formattedNumber = number.toFixed(0).split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator); 
+    }
+    return formattedNumber;
+  }
+}

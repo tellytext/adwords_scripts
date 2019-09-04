@@ -1,0 +1,278 @@
+/********
+* Automatically Creates & Associates Sitelinks 
+* Sitelinks created based on Google Calendar. 
+*
+* Version: 1.02
+* Date: 21/05/2018
+* Author: Nicholas Potts
+*
+* Updated include campaign names in 
+* INCLUDE_CAMPAIGN_NAME variable. Will only 
+* execute for enabled campaigns. 
+*
+********/
+
+var CHAMPIONS_LEAGUE = 'ADD GOOGLE_CALENDAT HERE';
+var CHAMPIONSHIP = 'ADD GOOGLE_CALENDAT HERE';
+var WORLD_CUP = 'ADD GOOGLE_CALENDAT HERE';
+var PREMIER_LEAGUE = 'ADD GOOGLE_CALENDAT HERE';
+
+var BST = true;
+
+// Leave blank to execute for all enabled campaigns
+// Not recommneded on large accounts due to runtime 
+var INCLUDE_CAMPAIGN_NAME = [
+//  "CAMPAIGN_NAME_1",
+//                    "CAMPAIGN_NAME_2"
+                    ];
+                     
+
+var CALENDAR_ID_ARRAY = [CHAMPIONS_LEAGUE, CHAMPIONSHIP, WORLD_CUP, PREMIER_LEAGUE]; 
+
+function main(){  
+  var todaysEvents = getEventsForAllCalendars();
+  createSitelinks(todaysEvents, getIds(INCLUDE_CAMPAIGN_NAME)); 
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function createSitelinks(todaysEvents, campaignIds){
+  var events = todaysEvents;
+  
+  for (var i = 0; i < events.length; i++){
+    
+    var event = events[i][0];
+    var startTime = events[i][1];
+    var endTime = events[i][2];
+    var tournament = events[i][3].replace('fixtures','');
+    var location = events[i][4]; 
+       
+    var d = new Date(startTime);
+    var year = JSON.stringify(d.getUTCFullYear());
+    var month = d.getUTCMonth() + 1; 
+    var date = d.getUTCDate();
+    var hour = getHour(d);
+    var min = d.getUTCMinutes();
+    var dayOfTheWeek = getDay(d);
+    
+    var formattedDate = concatDate(year, month, date);
+    
+    var adSchedule = {
+      dayOfWeek: dayOfTheWeek,
+      startHour: 0,
+      startMinute: 0,
+      endHour: hour, 
+      endMinute: min
+    };
+    
+    var campaignIterator = AdWordsApp.campaigns()
+    .withIds(campaignIds)
+    .get();
+    while (campaignIterator.hasNext()) {
+      var campaign = campaignIterator.next();
+      var campaignName = campaign.getName();
+      var sitelinksIterator = campaign.extensions().sitelinks().get();
+      
+      if(sitelinksIterator.totalNumEntities() >= 20){
+        Logger.log("Failed to create sitelink for %s. Active number of sitelinks %s", event, sitelinksIterator.totalNumEntities());
+        continue;
+      }
+      
+      if(checkIfSitelinkExists(campaignName, event)){
+        Logger.log("Event link text: %s already exists in campaign: %s", event, campaignName);
+        continue;
+      }
+      
+      try {
+        var sitelinkBuilder = AdWordsApp.extensions().newSitelinkBuilder();
+        var newSitelink = sitelinkBuilder
+        .withLinkText(event)
+        .withFinalUrl('https://www.bet365.com/dl/~offer')
+        .withMobileFinalUrl('https://www.bet365.com/dl/~offer')
+        .withDescription1(tournament + ' Betting.')
+        .withDescription2('Get the Latest Odds Now at bet365™.')
+        .withStartDate(formattedDate)
+        .withEndDate(formattedDate)
+        .withSchedules([adSchedule])
+        .build()
+        .getResult();
+        campaign.addSitelink(newSitelink);
+        Logger.log("Event sitelink: %s associated to campaign %s.", event, campaign.getName());
+      } 
+      catch (err){
+        Logger.log("Error building sitelink", err);
+      }
+    }
+  }
+} 
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function checkIfSitelinkExists(campaignName, event) {
+  
+  var linkTextArr = new Array();
+  
+  var campaignIterator = AdWordsApp.campaigns()
+  .withCondition("Name = '" + campaignName + "' ")
+  .get();
+  while (campaignIterator.hasNext()) {
+    var campaign = campaignIterator.next();
+    var sitelinksIterator = campaign.extensions().sitelinks().get();
+    while (sitelinksIterator.hasNext()) {
+      var sitelink = sitelinksIterator.next(); 
+      var linkText = sitelink.getLinkText();
+      linkTextArr.push(linkText);     
+    }
+  }
+  
+  if (linkTextArr.indexOf(event) > -1){ return true; }
+  
+  return false;
+  
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function getEventsForAllCalendars(){
+  
+  var arr = new Array();
+  
+  for(var i = 0; i < CALENDAR_ID_ARRAY.length; i++){
+    var calendarId = CALENDAR_ID_ARRAY[i];
+    var calendarEvents = getAllEventsForCalendar(calendarId);
+    arr.push(calendarEvents);
+  }
+  return arr.filter(function(n){ return n != undefined});
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function getListOfAllCalendars(){
+  var calendarList = Calendar.CalendarList.list();
+  for (var i = 0; i < calendarList.items.length; i++) {
+    var calendar = calendarList.items[i];
+    Logger.log('%s, %s', calendar.id, calendar.description);
+  }
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function getAllEventsForCalendar(calendarId){
+  
+  var calendarId = calendarId;
+  
+  var eventArray = new Array(); 
+  
+  var now = new Date();
+  now.setDate(now.getDate());
+  
+  var startOfToday = new Date(now.getYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  var endOfToday = new Date(now.getYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  
+  var calendarEvents = Calendar.Events.list(calendarId, {
+    timeMin: startOfToday.toISOString(),
+    timeMax: endOfToday.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime'  
+  });
+   
+  if (calendarEvents.items && calendarEvents.items.length > 0){
+    for (var x = 0; x < calendarEvents.items.length; x++){
+      var calendarEvent = calendarEvents.items[x];
+      if (calendarEvent.start.date){
+        var start = calendarEvent.start.date;
+      } else {
+        var startTime = calendarEvent.start.dateTime;
+        var endTime = calendarEvent.end.dateTime;
+        var event = calendarEvent.summary;
+        var description = calendarEvent.description;
+        var tournament = calendarEvent.organizer.displayName;
+        var location = calendarEvent.location;
+        
+        eventArray.push(event, startTime, endTime, tournament, location)        
+      } 
+    }
+    return eventArray;
+  } else {
+    Logger.log("No events found in %s calendar for date %s", eventList(calendarId), startOfToday);
+  } 
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function getDay(d){
+  var weekday = new Array();
+  weekday[0] = "SUNDAY";
+  weekday[1] = "MONDAY";
+  weekday[2] = "TUESDAY";
+  weekday[3] = "WEDNESDAY";
+  weekday[4] = "THURSDAY";
+  weekday[5] = "FRIDAY";
+  weekday[6] = "SATURDAY";
+  
+  return weekday[parseInt(d.getDay()).toFixed()];
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function getHour(d){
+  try{
+    if(BST == true){
+      return d.getUTCHours() + 1;
+    } else {
+      return d.getUTCHours();
+    }
+  } 
+  catch(err){
+    Logger.log("Error setting hour: ", err);
+  }
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function concatDate(year, month, date){
+  try{
+    if(month < 10) {
+      return year.concat(0, month, date).toString();
+    } else {
+      return year.concat(month, date).toString();
+    }
+  }
+  catch(err) {
+    Logger.log("Error concatenating date string: ", err);
+  }
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function getIds(includeCampaigns){
+  
+  var campaignIds = new Array();
+
+  var campaignIterator = AdWordsApp.campaigns().withCondition("Status = ENABLED").get();
+  while(campaignIterator.hasNext()){
+    var campaign = campaignIterator.next(); 
+    var campaignName = campaign.getName();
+    
+    if(includeCampaigns != 0){      
+      for (var i = 0; i < includeCampaigns.length; i++){
+        var indexName = campaignName.toLowerCase().indexOf(includeCampaigns[i].toLowerCase());
+        var campaignId = campaign.getId();
+        if(indexName !== -1){
+          campaignIds.push(campaignId);
+        }
+      }
+    } else {
+      var campaignId = campaign.getId();
+      campaignIds.push(campaignId);
+    }
+  }  
+  return campaignIds;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function eventList(calendarId){
+  
+  if (calendarId == '0qsk3bmjv6p0pps8eslmrnfp8skaptms@import.calendar.google.com'){
+    return "Champions League";
+  } else if (calendarId == 'fealcbq5l7jg5kkvlam5p396qo97pgo9@import.calendar.google.com'){
+    return "Championship"; 
+  } else if (calendarId == 'bphso965blgpbtaiq1k8vc65kl41aa8q@import.calendar.google.com'){
+    return "World Cup";
+  } else if (calendarId == '2tkcrnabirpmof75jrp23q2fifrqn3c0@import.calendar.google.com'){
+    return "Premier League";
+  } else {
+    return "No calendar id found";
+  }
+}

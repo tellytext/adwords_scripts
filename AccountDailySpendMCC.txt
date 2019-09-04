@@ -1,0 +1,632 @@
+// sets date configurations and accounts for timezone
+var today = new Date();
+today.setTime(today.getTime() + today.getTimezoneOffset()*60*1000);
+
+var firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+var lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+var yesterday = new Date(today.getFullYear(), today.getMonth(), (today.getDate() - 1));
+var daysSoFar = yesterday.getDate();
+
+// making sure we avoid selecting a date of 0 therefore rolling back to the previous month
+var toDateInt = (today.getDate() - 1) ? (today.getDate() - 1) : 1;
+var toDateString = new Date(today.getFullYear(), today.getMonth(), toDateInt);
+var longMonth = Utilities.formatDate(today, "Europe/London", "MMMM");
+var fromDateYYYYMMDD = Utilities.formatDate(firstDayOfMonth, "Europe/London", "YYYYMMdd");
+var toDateYYYYMMDD = Utilities.formatDate(toDateString, "Europe/London", "YYYYMMdd");
+
+function main() {
+  
+  return;
+  
+  var affiliateHours = [2, 3, 4, 5];
+  var nowHour = Utilities.formatDate(new Date(), "Europe/London", "HH");
+  nowHour = parseFloat(nowHour);
+
+  var yesterday = createAffDate(new Date().setDate(new Date().getDate()-1));
+  
+  runReport();
+  
+  return;
+  
+  if (nowHour === 7) {
+    runReport();
+    Logger.log("Run morning report");
+  }
+  else if (affiliateHours.indexOf(nowHour) !== -1) {
+    // we're currently in an allowed hour;  
+    // runAffiliateReport();
+    Logger.log("Run afternoon report");
+  }
+  else {
+    
+    var obj = {};
+    var data = getAffiliateData();
+    // Logger.log(data[0]);
+    var dailyData = data.filter(filterByDate("20/03/2017"));  
+    
+    for (var x in data) {
+      var account = data[x][0]
+      obj[account] = {};
+      obj[account]["dailyFTDs"] = 0;
+      obj[account]["mtdFTDs"] = 0;
+    }
+    
+    for (var x in dailyData) {
+      obj[account]["dailyFTDs"] = dailyData[x][5];
+    }
+    
+    for (var x in data) {
+      var account = data[x][0];
+      
+      if (obj.hasOwnProperty(account)) {        
+        obj[account]["mtdFTDs"] += parseFloat(data[x][5]);
+      }
+      else {
+        Logger.log(account + "does not have property");
+      }
+    }
+    
+    Logger.log(obj);
+    
+    var affiliateMapping = {
+      'Latitude Sports':'bet365 Sportsbook',
+      'Latitude UK Sports':'bet365 Sportsbook',
+      'Latitude Sports Mob.':'bet365 Sportsbook',
+      'Lat. Sports Mobile':'bet365 Sportsbook',
+      'Lat. Sports Tablet':'bet365 Sportsbook',
+      'Latitude UK Sports 2':'bet365 Sportsbook',
+      'LATLINKSCRIPT':'bet365 Sportsbook',
+      'LATLINKSCRIPT2':'bet365 Sportsbook',
+      'LatLinkHorse':'bet365 Sportsbook',
+      'LatSportsGoo3':'bet365 Sportsbook',
+      'Latitude DK Sports':'bet365 Sportsbook DK',
+      'LatDKAutomat':'bet365 Sportsbook DK',
+      'LatDKSports3':'bet365 Sportsbook DK',
+      'Latitude DK Sports 2':'bet365 Sportsbook DK',
+      'Latitude Casino DK':'bet365 Casino DK',
+      'Latitude ES Sports':'bet365 Sportsbook ES',
+      'Lat. ES Sports Mob':'bet365 Sportsbook ES',
+      'LatFootAutES':'bet365 Sportsbook ES',
+      'LatitudeESComp':'bet365 Competitors ES',
+      'Latitude Competitors':'bet365 Competitor Bidding',
+      'Latitude Brand.':'bet365 Brand',
+      'Latitude Brand Mob.':'bet365 Brand',
+      'Latitude Bingo':'bet365 Bingo',
+      'Latitude Poker':'bet365 Poker',
+      'LatPokerGoo':'bet365 Poker',
+      'Latitude Casino':'bet365 Casino',
+      'Latitude Games':'bet365 Casino',
+      'Latitude Casino Mob.':'bet365 Casino',
+      'LatCasGoogle':'bet365 Casino',
+      'Latitude Financials':'bet365 Financial',
+      'bet365dkcompetitors':'bet365 Sportsbook DK',
+      'LatCasino_ES':'bet365 Casino ES',
+      'LatBrandIT':'bet365 Sportsbook IT',
+      'LatSportsIT':'bet365 Sportsbook IT',
+      'LatFootAutIT':'bet365 Sportsbook IT',
+      'LatCasinoIT':'bet365 Casino IT',
+      'LatCompBidIT':'bet365 Sportsbook IT',
+      '365_PSG17_AD01':'bet365 Financial',
+      'MO Brand':'bet365 Brand'
+    };
+    
+    
+  }
+}
+
+function filterByDate(date) {
+  return function (value) {
+    return value[2] == date;
+  }
+}
+
+function getAffiliateData() {
+  var sheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1o5IJxJ0qzIpNbqLLWqxzFEeFEzY3Dl2RIg8uiXECeX4/edit#gid=298891552");
+  var mtd = sheet.getSheetByName("MTD");
+  var data = mtd.getRange(2, 1, mtd.getLastRow()-1, mtd.getLastColumn()).getValues();
+  return data;
+}
+
+function createAffDate(date) {
+  var date = new Date(date);
+  var day;
+  var month;
+  var year;
+  
+  if (date.getDate() < 10) {
+    day = "0" + date.getDate();
+  }
+  else {
+    day = date.getDate();
+  }
+  
+  if ((date.getMonth() + 1) < 10) {
+    month = "0" + (date.getMonth() + 1);
+  }
+  else {
+    month = date.getMonth() + 1;
+  }
+  
+  return day + "/" + month + "/" + date.getFullYear();
+}
+
+function runReport() {
+  
+  var account_grouping_obj = {
+    '912-846-9832' : 'Brand UK',
+    '827-317-5323' : 'Sportsbook UK',
+    '356-029-6721' : 'Casino UK',
+    '624-729-4895' : 'Sportsbook DK',
+    '892-414-1477' : 'Sportsbook IT',
+    '321-899-0572' : 'Bingo UK',
+    '362-659-1104' : 'Sportsbook IT',
+    '328-955-1178' : 'Poker UK',
+    '973-567-0722' : 'Casino IT',
+    '504-023-0197' : 'Casino DK',
+    '217-357-5970' : 'Sportsbook IT',
+    '685-329-8307' : 'Sportsbook UK',
+    '504-103-1976' : 'Financials UK',
+    '194-566-2150' : 'Sportsbook DK',
+    '929-244-1488' : 'YouTube UK',
+    '488-490-9285' : 'Competitor Bidding UK',
+    '553-166-7887' : 'Competitor Bidding IT',
+    '426-468-7626' : 'Competitor Bidding DK'
+  };
+  
+  var recipients = "Luke.Anderson@bet365.com, Nicholas.Potts@bet365.com, Christopher.Taylor@bet365.com, Neil.Fairweather@bet365.com, " + 
+    "Diego.Lavatelli@bet365.com, Mark.Trapani@bet365.com, Ezza.Ayoubi@bet365.com, Ulrik.Haack-Pedersen@bet365.com, Danelle.Azzopardi@bet365.com, " + 
+      "Francesco.Corica@bet365.com, AnnalisaDe.Michele@bet365.com, Alberto.Prete@bet365.com, Laura.Fernandez@bet365.com, Alice.Ferri@bet365.com, Lauren.Farrell@bet365.com";
+  
+  // var recipients = "Luke.Anderson@bet365.com";
+  
+  Logger.log("Using dates: " + firstDayOfMonth + " to: " + yesterday);
+
+  // defines empty arrays and table headers
+  var yesterday_summary = [];
+  var yesterday_array = [];
+  var html = [];
+  var yesterday_th_arr = ["Account Name", "Account ID", "Spend"];
+  var mtd_th_arr = ["Account Name", "Spend", "Budget", "% Budget Spent", "Exp. Spend", "Exp. Over/Under Spend", "Budget Pacing",  "Budget Flight Pacing", "ADS", "RDS"];
+  var mtd_data = [];
+  var masterObj = {};
+  var total = 0;
+
+  // spreadsheet and data range configurations
+  var SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1lkrAfBx2Vo5k6xYAYQ7SsqD-MmXEP3ntxXFsBcvwczI/edit#gid=1394691021';
+  var SHEET_NAME = 'new_budgets';
+  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+  var budgetSheet = ss.getSheetByName(SHEET_NAME);
+  var budgetMonthRange = ss.getRangeByName("NewDateRange");
+  var setBudgetURL = "<a href='https://docs.google.com/spreadsheets/d/1lkrAfBx2Vo5k6xYAYQ7SsqD-MmXEP3ntxXFsBcvwczI/edit#gid=288017567'>Set budget</a>";
+  
+  // if DateRange range exists, get the date range
+  if (budgetMonthRange) {
+    var dateArray = ss.getRangeByName("NewDateRange").getValues();
+  }
+  
+  // loop through the date range array and find the current month
+  for (var i = 0; i < dateArray[0].length; i++) {
+     if (longMonth === dateArray[0][i]) {
+       var monthCol = i + 1;
+    }
+  }
+  
+  // defines the budget ranges and configures the account object
+  var budgetRange = budgetSheet.getRange(1, 1, budgetSheet.getLastRow(), budgetSheet.getLastColumn());
+  for (var i = 2; i < budgetSheet.getLastRow() + 1; i++) {
+    var account = budgetRange.getCell(i, 1).getValue();
+    var budget = budgetRange.getCell(i, monthCol).getValue();
+    masterObj[account] = {
+      'budget' : budget,
+      'accounts' : {}
+    };
+  }
+  
+  // sets the iterator for yesterdays stats, retrieves stats and pushes into yesterday array
+  var accountIterator = MccApp.accounts().forDateRange("YESTERDAY").withCondition("Cost > 0").orderBy('Cost DESC').get();
+  while (accountIterator.hasNext()) {
+    var account = accountIterator.next();
+    var stats = account.getStatsFor("YESTERDAY");
+    var spend = stats.getCost();
+    var accountName = account.getName();
+    yesterday_summary = [accountName, account.getCustomerId(),formatNumber(spend, true)];
+    yesterday_array.push(yesterday_summary);
+  }
+  
+  // sets the iterator for this months stats, retrieves stats and pushes into month array
+  var accountIterator = MccApp.accounts().forDateRange("THIS_MONTH").withCondition("Cost > 0").orderBy('Cost DESC').get();
+  while (accountIterator.hasNext()) {
+    var account = accountIterator.next();
+    var stats = account.getStatsFor(fromDateYYYYMMDD, toDateYYYYMMDD);
+    var accountName = account.getName();
+    var accountId = account.getCustomerId();
+    var accountGrouping = account_grouping_obj[accountId];
+    
+    masterObj[accountGrouping]['accounts'][accountName] = {
+      'spend' : stats.getCost(),
+    }
+  }
+  
+  for (var i in masterObj) {
+    for (var j in masterObj[i]['accounts']) {
+      total += masterObj[i]['accounts'][j]['spend'];
+      
+      masterObj[i]['accounts'][j]['spendF'] = formatNumber(masterObj[i]['accounts'][j].spend, true);
+      
+      if (masterObj[i]['budget'] !== undefined && masterObj[i]['budget'] > 0) {
+        masterObj[i]['accounts'][j]['percentBudget'] = (masterObj[i]['accounts'][j]['spend']/masterObj[i]['budget']) * 100;
+        masterObj[i]['accounts'][j]['percentBudgetF'] = (masterObj[i]['accounts'][j]['percentBudget']).toFixed(2) + "%";
+      }
+      else {
+        masterObj[i]['accounts'][j]['percentBudgetF'] = setBudgetURL;
+      }
+    }
+    
+    masterObj[i]['totalSpendF'] = formatNumber(total, true);
+
+    if (masterObj[i]['budget'] !== undefined && masterObj[i]['budget'] > 0) {
+      masterObj[i]['budgetF'] = formatNumber(masterObj[i]['budget'], true);
+      masterObj[i]['pecentSpentF'] = ((total/masterObj[i]['budget']) * 100).toFixed(2) + "%";
+      masterObj[i]['expectedSpendF'] = formatNumber((total/daysSoFar) * lastDayOfMonth, true);
+      masterObj[i]['expectedUnderSpendF'] = formatNumber(masterObj[i]['budget'] - ((total/daysSoFar) * lastDayOfMonth), true);
+      masterObj[i]['proRataBudgetF'] = formatNumber((masterObj[i]['budget']/lastDayOfMonth)*daysSoFar, true);
+      masterObj[i]['proRataOverUnderF'] = ((total/((masterObj[i]['budget']/lastDayOfMonth)*daysSoFar))*100).toFixed(2) + "%";
+      masterObj[i]['averageDailySpend'] = formatNumber(total/daysSoFar, true);
+      masterObj[i]['remainingDailySpend'] = formatNumber((masterObj[i]['budget'] - total) / (lastDayOfMonth - daysSoFar), true);
+    }
+    else {
+      masterObj[i]['budgetF'] = setBudgetURL;
+      masterObj[i]['pecentSpentF'] = setBudgetURL;
+      masterObj[i]['expectedSpendF'] = setBudgetURL;
+      masterObj[i]['expectedUnderSpendF'] = setBudgetURL;
+      masterObj[i]['proRataBudgetF'] = setBudgetURL;
+      masterObj[i]['proRataOverUnderF'] = setBudgetURL;
+      masterObj[i]['averageDailySpend'] = setBudgetURL;
+      masterObj[i]['remainingDailySpend'] = setBudgetURL;
+    }
+    total = 0;
+  }
+  for (var i in masterObj) {
+    mtd_data.push('<tr class="tableRowBold"><td>');
+    mtd_data.push('<strong>' + i + '</strong>');
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].totalSpendF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].budgetF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].pecentSpentF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].expectedSpendF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].expectedUnderSpendF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].proRataBudgetF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].proRataOverUnderF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].averageDailySpend);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].remainingDailySpend);
+    mtd_data.push('</td></tr>');
+    
+    for (var j in masterObj[i]['accounts']) {
+      mtd_data.push('<tr><td class="tableColor">');
+      mtd_data.push(j);
+      mtd_data.push('</td><td class="tableColor">');
+      mtd_data.push(masterObj[i]['accounts'][j].spendF);
+      mtd_data.push('</td><td class="tableColor">');
+      mtd_data.push(masterObj[i]['accounts'][j].percentBudgetF);
+      mtd_data.push('</td></tr>');
+    }
+  }
+
+  mtd_data = mtd_data.join(" ");
+  
+  // preparing the table data and table headers in html
+  var yesterday_data = getRows(yesterday_array).join(" ");
+  var yesterday_th = prepareHeaders(yesterday_th_arr);
+  var mtd_th = prepareHeaders(mtd_th_arr);
+  
+  html.push(
+    '<html><head><style>',
+    '.tableRowBold {font-weight: bold; font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ddd; border: 1px solid black}',
+    '.tableColor {font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ffffff; border: 1px solid black}',
+    'th {font: 12pt arial; padding: 10px 10px 10px 10px; background-color: #ddd; text-align: left; border: 1px solid black}',
+    'td {font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ddd; border: 1px solid black}',
+    'span {font: 14pt arial;}',
+    '</style></head>',
+    '<body>',
+    '<div><span>Month to date - ', Utilities.formatDate(firstDayOfMonth, "Europe/London", "dd/MM/YYYY"), "-" , Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY"),'</span></div>',
+    '<table>', mtd_th, mtd_data,'</table>',
+    '</br>',
+    '<div><span>Yesterday - ', Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY") , '</span></div>',
+    '<table>', yesterday_th, yesterday_data,'</table>',
+    setBudgetURL,
+    '</body>',
+    '</html>');
+  
+  try {
+    MailApp.sendEmail({
+      to: recipients,
+      subject: "MCC Summary Report",
+      htmlBody: html.join('\n'),
+    });
+    
+    Logger.log("MCC Report Sent");
+  }
+  catch(err) {
+    Logger.log("Error with email: " + err);
+  }
+}
+
+function getRows(array) {
+  arr= [];
+            
+  for (var i = 0, len = array.length; i < len; i++) {
+    arr.push("<tr>");
+    for (var j = 0, lenj = array[i].length; j < lenj; j++) {
+      arr.push("<td>", array[i][j], "</td>");
+    }
+    arr.push("</tr>");
+  }
+return arr;
+}
+
+function formatNumber(number, isCurrency) {
+  
+  var thousandsSeparator = ",";
+  var currencySymbol = "£";
+  var decimalMark = ".";
+  
+  if (number < 0) {
+    var formattedNumber = Math.abs(number);
+    
+    if (isCurrency) {
+      formattedNumber = formattedNumber.toFixed(2);
+      formattedNumber = formattedNumber.substr(0,formattedNumber.length-3);
+      formattedNumber = formattedNumber.split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator);
+      formattedNumber = currencySymbol + formattedNumber + decimalMark + number.toFixed(2).substr(-2);
+    } else {
+      formattedNumber = formattedNumber.toFixed(0).split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator); 
+    }
+    return "over " + formattedNumber;
+  }
+  else {
+    if (isCurrency) {
+      var formattedNumber = number.toFixed(2);
+      formattedNumber = formattedNumber.substr(0,formattedNumber.length-3);
+      formattedNumber = formattedNumber.split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator);
+      formattedNumber = currencySymbol + formattedNumber + decimalMark + number.toFixed(2).substr(-2);
+    } else {
+      var formattedNumber = number.toFixed(0).split('').reverse().join('').replace(/(...)/g,"$1 ").trim().split('').reverse().join('').replace(/ /g,thousandsSeparator); 
+    }
+    return formattedNumber;
+  }
+}
+
+function prepareHeaders(array) {
+  var string = "";
+  
+  for (var key in array) {
+    string += "<th>" + array[key] + "</th>";
+  } return string;
+}
+
+function runAffiliateReport() {
+   
+  var sheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1o5IJxJ0qzIpNbqLLWqxzFEeFEzY3Dl2RIg8uiXECeX4/edit#gid=298891552");
+  var mtd = sheet.getSheetByName("MTD");
+  var lastDownloaded = sheet.getSheetByName("LastDownloaded");
+  var check = lastDownloaded.getRange(1, 1).getValue();
+    
+  var yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  var account_grouping_obj = {
+    'bet365 Brand' : 'Brand UK',
+    'bet365 Sportsbook' : 'Sportsbook UK',
+    'bet365 Sportsbook ES' : 'Sportsbook ES',
+    'bet365 Casino' : 'Casino UK',
+    'bet365 Sportsbook DK' : 'Sportsbook DK',
+    'bet365 Sportsbook IT' : 'Sportsbook IT',
+    'bet365 Competitor Bidding' : 'Sportsbook UK',
+    'bet365 Bingo' : 'Bingo UK',
+    'bet365 Brand IT' : 'Sportsbook IT',
+    'bet365 Casino ES' : 'Casino ES',
+    'bet365 Poker' : 'Poker UK',
+    'bet365 Sportsbook Automation' : 'Sportsbook UK',
+    'bet365 Casino IT' : 'Casino IT',
+    'bet365 Casino DK' : 'Casino DK',
+    'bet365 Sportsbook IT Automation' : 'Sportsbook IT',
+    'bet365 Sportsbook ES Automation' : 'Sportsbook ES',
+    'bet365 SB Horse Racing Automation (New)' : 'Sportsbook UK',
+    'bet365 Financial' : 'Financials UK',
+    'bet365 Competitors ES' : 'Sportsbook ES',
+    'bet365 Sportsbook DK Automation' : 'Sportsbook DK',
+    'bet365 Youtube UK' : 'YouTube UK',
+    'bet365 Competitor Bidding' : 'Competitor Bidding UK'
+  };
+  
+  // var recipients = "Luke.Anderson@bet365.com, Nicholas.Potts@bet365.com, Christopher.Taylor@bet365.com, Neil.Fairweather@bet365.com, " + 
+    "Diego.Lavatelli@bet365.com, Mark.Trapani@bet365.com, Ezza.Ayoubi@bet365.com, Ulrik.Haack-Pedersen@bet365.com, Danelle.Azzopardi@bet365.com, " + 
+      "Francesco.Corica@bet365.com, AnnalisaDe.Michele@bet365.com, Alberto.Prete@bet365.com, Laura.Fernandez@bet365.com";
+  
+  var recipients = "Luke.Anderson@bet365.com";
+  
+  Logger.log("Using dates: " + firstDayOfMonth + " to: " + yesterday);
+
+  // defines empty arrays and table headers
+  var yesterday_summary = [];
+  var yesterday_array = [];
+  var html = [];
+  var yesterday_th_arr = ["Account Name", "Spend"];
+  var mtd_th_arr = ["Account Name", "Spend", "Budget", "% Budget Spent", "Exp. Spend", "Exp. Over/Under Spend", "Budget Pacing",  "Budget Flight Pacing", "ADS", "RDS"];
+  var mtd_data = [];
+  var masterObj = {};
+  var total = 0;
+
+  // spreadsheet and data range configurations
+  var SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1lkrAfBx2Vo5k6xYAYQ7SsqD-MmXEP3ntxXFsBcvwczI/edit#gid=1394691021';
+  var SHEET_NAME = 'new_budgets';
+  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+  var budgetSheet = ss.getSheetByName(SHEET_NAME);
+  var budgetMonthRange = ss.getRangeByName("NewDateRange");
+  var setBudgetURL = "<a href='https://docs.google.com/spreadsheets/d/1lkrAfBx2Vo5k6xYAYQ7SsqD-MmXEP3ntxXFsBcvwczI/edit#gid=288017567'>Set budget</a>";
+  
+  // if DateRange range exists, get the date range
+  if (budgetMonthRange) {
+    var dateArray = ss.getRangeByName("NewDateRange").getValues();
+  }
+  
+  // loop through the date range array and find the current month
+  for (var i = 0; i < dateArray[0].length; i++) {
+     if (longMonth === dateArray[0][i]) {
+       var monthCol = i + 1;
+    }
+  }
+  
+  // defines the budget ranges and configures the account object
+  var budgetRange = budgetSheet.getRange(1, 1, budgetSheet.getLastRow(), budgetSheet.getLastColumn());
+  for (var i = 2; i < budgetSheet.getLastRow() + 1; i++) {
+    var account = budgetRange.getCell(i, 1).getValue();
+    var budget = budgetRange.getCell(i, monthCol).getValue();
+    masterObj[account] = {
+      'budget' : budget,
+      'accounts' : {}
+    };
+  }
+
+  // sets the iterator for yesterdays stats, retrieves stats and pushes into yesterday array
+  var accountIterator = MccApp.accounts().forDateRange("YESTERDAY").withCondition("Cost > 0").orderBy('Cost DESC').get();
+  while (accountIterator.hasNext()) {
+    var account = accountIterator.next();
+    var stats = account.getStatsFor("YESTERDAY");
+    var spend = stats.getCost();
+    var accountName = account.getName();
+    yesterday_summary = [accountName, formatNumber(spend, true)];
+    yesterday_array.push(yesterday_summary);
+  }
+
+  // sets the iterator for this months stats, retrieves stats and pushes into month array
+  var accountIterator = MccApp.accounts().forDateRange("THIS_MONTH").withCondition("Cost > 0").orderBy('Cost DESC').get();
+  while (accountIterator.hasNext()) {
+    var account = accountIterator.next();
+    var stats = account.getStatsFor(fromDateYYYYMMDD, toDateYYYYMMDD);
+    var accountName = account.getName();
+    var accountGrouping = account_grouping_obj[accountName];
+
+    masterObj[accountGrouping]['accounts'][accountName] = {
+      'spend' : stats.getCost(),
+    }
+  }
+  
+  for (var i in masterObj) {
+    for (var j in masterObj[i]['accounts']) {
+      total += masterObj[i]['accounts'][j]['spend'];
+      
+      masterObj[i]['accounts'][j]['spendF'] = formatNumber(masterObj[i]['accounts'][j].spend, true);
+      
+      if (masterObj[i]['budget'] !== undefined && masterObj[i]['budget'] > 0) {
+        masterObj[i]['accounts'][j]['percentBudget'] = (masterObj[i]['accounts'][j]['spend']/masterObj[i]['budget']) * 100;
+        masterObj[i]['accounts'][j]['percentBudgetF'] = (masterObj[i]['accounts'][j]['percentBudget']).toFixed(2) + "%";
+      }
+      else {
+        masterObj[i]['accounts'][j]['percentBudgetF'] = setBudgetURL;
+      }
+    }
+    
+    masterObj[i]['totalSpendF'] = formatNumber(total, true);
+
+    if (masterObj[i]['budget'] !== undefined && masterObj[i]['budget'] > 0) {
+      masterObj[i]['budgetF'] = formatNumber(masterObj[i]['budget'], true);
+      masterObj[i]['pecentSpentF'] = ((total/masterObj[i]['budget']) * 100).toFixed(2) + "%";
+      masterObj[i]['expectedSpendF'] = formatNumber((total/daysSoFar) * lastDayOfMonth, true);
+      masterObj[i]['expectedUnderSpendF'] = formatNumber(masterObj[i]['budget'] - ((total/daysSoFar) * lastDayOfMonth), true);
+      masterObj[i]['proRataBudgetF'] = formatNumber((masterObj[i]['budget']/lastDayOfMonth)*daysSoFar, true);
+      masterObj[i]['proRataOverUnderF'] = ((total/((masterObj[i]['budget']/lastDayOfMonth)*daysSoFar))*100).toFixed(2) + "%";
+      masterObj[i]['averageDailySpend'] = formatNumber(total/daysSoFar, true);
+      masterObj[i]['remainingDailySpend'] = formatNumber((masterObj[i]['budget'] - total) / (lastDayOfMonth - daysSoFar), true);
+    }
+    else {
+      masterObj[i]['budgetF'] = setBudgetURL;
+      masterObj[i]['pecentSpentF'] = setBudgetURL;
+      masterObj[i]['expectedSpendF'] = setBudgetURL;
+      masterObj[i]['expectedUnderSpendF'] = setBudgetURL;
+      masterObj[i]['proRataBudgetF'] = setBudgetURL;
+      masterObj[i]['proRataOverUnderF'] = setBudgetURL;
+      masterObj[i]['averageDailySpend'] = setBudgetURL;
+      masterObj[i]['remainingDailySpend'] = setBudgetURL;
+    }
+    total = 0;
+  }
+  for (var i in masterObj) {
+    mtd_data.push('<tr class="tableRowBold"><td>');
+    mtd_data.push('<strong>' + i + '</strong>');
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].totalSpendF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].budgetF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].pecentSpentF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].expectedSpendF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].expectedUnderSpendF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].proRataBudgetF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].proRataOverUnderF);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].averageDailySpend);
+    mtd_data.push('</td><td>');
+    mtd_data.push(masterObj[i].remainingDailySpend);
+    mtd_data.push('</td></tr>');
+    
+    for (var j in masterObj[i]['accounts']) {
+      mtd_data.push('<tr><td class="tableColor">');
+      mtd_data.push(j);
+      mtd_data.push('</td><td class="tableColor">');
+      mtd_data.push(masterObj[i]['accounts'][j].spendF);
+      mtd_data.push('</td><td class="tableColor">');
+      mtd_data.push(masterObj[i]['accounts'][j].percentBudgetF);
+      mtd_data.push('</td></tr>');
+    }
+  }
+
+  mtd_data = mtd_data.join(" ");
+  
+  // preparing the table data and table headers in html
+  var yesterday_data = getRows(yesterday_array).join(" ");
+  var yesterday_th = prepareHeaders(yesterday_th_arr);
+  var mtd_th = prepareHeaders(mtd_th_arr);
+  
+  html.push(
+    '<html><head><style>',
+    '.tableRowBold {font-weight: bold; font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ddd; border: 1px solid black}',
+    '.tableColor {font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ffffff; border: 1px solid black}',
+    'th {font: 12pt arial; padding: 10px 10px 10px 10px; background-color: #ddd; text-align: left; border: 1px solid black}',
+    'td {font: 10pt arial; padding: 3px 3px 3px 3px; background-color: #ddd; border: 1px solid black}',
+    'span {font: 14pt arial;}',
+    '</style></head>',
+    '<body>',
+    '<div><span>Month to date - ', Utilities.formatDate(firstDayOfMonth, "Europe/London", "dd/MM/YYYY"), "-" , Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY"),'</span></div>',
+    '<table>', mtd_th, mtd_data,'</table>',
+    '</br>',
+    '<div><span>Yesterday - ', Utilities.formatDate(yesterday, "Europe/London", "dd/MM/YYYY") , '</span></div>',
+    '<table>', yesterday_th, yesterday_data,'</table>',
+    '</body>',
+    '</html>');
+  
+  try {
+    MailApp.sendEmail({
+      to: recipients,
+      subject: "MCC Summary Report",
+      htmlBody: html.join('\n'),
+    });
+    
+    Logger.log("MCC Report Sent");
+    
+  } catch(err) {
+    Logger.log("Error with email: " + err);
+  }
+}

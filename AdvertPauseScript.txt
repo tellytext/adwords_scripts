@@ -1,0 +1,97 @@
+// pauses all ads using the AdPauseScript Label, if the date is prior to the time of script run-time
+
+function main() {
+  
+  var mccAccount = AdWordsApp.currentAccount();
+  var now = new Date();
+  
+  Logger.log("UTC time now UTC: %s", now.toUTCString());
+  
+  var accounts = MccApp.accounts().get();
+  
+  while (accounts.hasNext()) {
+    var account = accounts.next();
+    MccApp.select(account);
+    var labels = AdWordsApp.labels().withCondition("Name CONTAINS_IGNORE_CASE 'AdPauseScript'").get();
+    
+    if (labels.totalNumEntities() === 0) {
+      continue;
+    }
+    
+    Logger.log("Processing account %s (%s) with %s labels", account.getName(), account.getCustomerId(), labels.totalNumEntities().toFixed());
+
+    while (labels.hasNext()) {
+      var label = labels.next();
+      
+      if (label.ads().get().totalNumEntities() === 0) {
+        // cleans up legacy labels, shouldn't be required now as label gets removed when ad is paused.
+        // label.remove();
+        continue;
+      }
+      else {
+        Logger.log("   Label '%s' (%s) has %s ad(s) assigned", label.getName(), label.getId().toFixed(), label.ads().get().totalNumEntities());
+      }
+      
+      var labelArr = label.getName().replace(/ /g, '').split(',');
+      
+      if (labelArr.length > 1) {
+        var labelObj = convertLabelToObject(labelArr);
+      }
+      else {
+        Logger.log("   Label '%s' (%s) is in incorrect format, review formatting of label", label.getName(), label.getId().toFixed());
+        continue;
+      }
+          
+      var timeZoneOffset = (new Date().getTimezoneOffset())/60;   
+      var labelDateObj = new Date(labelObj.year, labelObj.month-1, labelObj.day, labelObj.hour-timeZoneOffset, labelObj.minute);
+      
+      Logger.log("   Date object for label UTC: %s", labelDateObj.toUTCString());
+      
+      if (now > labelDateObj) {
+        var pausedArr = [];
+        var adsToPause = label.ads().get();
+        
+        Logger.log("   Label '%s' (%s) is in the past removing label and pausing %s ad(s)",label.getName(), label.getId().toString(), label.ads().get().totalNumEntities());
+
+        while (adsToPause.hasNext()) {
+          var ad = adsToPause.next();
+          ad.pause();
+          ad.removeLabel(label.getName());
+          pausedArr.push(ad.getId());
+        }
+        
+        label.remove();
+        Logger.log("   Paused ads with ids %s", pausedArr);
+      }
+    }
+  }
+}
+
+function search(strToFind, arr) {
+  for (var x in arr) {
+    var r = new RegExp(strToFind,"i");
+    var index = arr[x].search(r);
+    if(index !== -1) {
+      return x;
+    }
+  }
+  return -1;
+}
+
+function convertLabelToObject(array) {
+  
+  var dayIndex = search("Day", array);
+  var monthIndex = search("Month", array);
+  var yearIndex = search("Year", array);
+  var hourIndex = search("Hour", array);
+  var minuteIndex = search("Minute", array);
+  
+  var obj = {
+    'day':array[dayIndex].split('=')[1],
+    'month':array[monthIndex].split('=')[1],
+    'year':array[yearIndex].split('=')[1],
+    'hour':array[hourIndex].split('=')[1],
+    'minute':array[minuteIndex].split('=')[1]
+  };
+  return obj;
+}

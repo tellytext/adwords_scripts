@@ -1,0 +1,64 @@
+function main() {
+  
+  Logger.log("---START SCRIPT---")
+  
+  var accounts = MccApp.accounts().withIds(['624-729-4895']).get();
+  
+  while (accounts.hasNext()) {
+  
+    var desktopHttpChangeCount = 0;
+    var mobileHttpChangeCount = 0;
+    var account = accounts.next();
+    
+    MccApp.select(account);
+//    var keywords = AdWordsApp.keywords()
+//    .withCondition("CampaignStatus = ENABLED")
+//    .withCondition("AdGroupStatus = ENABLED")
+//    .withCondition("Status = ENABLED")
+//    .get();
+
+    var keywords = AdWordsApp.keywords()
+    .withCondition("CampaignName CONTAINS_IGNORE_CASE 'ZZ(Old) 0001 - Brand'")
+    .get();
+    
+    Logger.log("Checking keywords for account %s", account.getName());
+    
+    while (keywords.hasNext()) {
+      
+      var keyword = keywords.next();
+      
+      var keywordText = keyword.getText();
+      var keywordMobileUrl = keyword.urls().getMobileFinalUrl();
+      var keywordDesktopUrl = keyword.urls().getFinalUrl();
+      var keywordTrackingTemplate = keyword.urls().getTrackingTemplate();
+      
+      var regex = new RegExp("^(http|https)://", "i");
+      var keywordMobileUrlMatch = regex.exec(keywordMobileUrl);
+      var keywordDesktopUrlMatch = regex.exec(keywordDesktopUrl);
+      
+      if ((keywordMobileUrlMatch || keywordDesktopUrlMatch) === null) {
+        continue;
+      }
+      
+      Logger.log("%s %s %s", keyword.getText(), keywordMobileUrlMatch, keywordDesktopUrlMatch);
+      
+      if (keywordMobileUrlMatch[1] === "http") {
+        var newKeywordMobileUrl = keywordMobileUrl.replace("http://", "https://");
+        mobileHttpChangeCount++;
+        keyword.urls().setMobileFinalUrl(newKeywordMobileUrl);
+      }
+      
+      if (keywordDesktopUrlMatch[1] === "http") {
+        var newKeywordDesktopUrl = keywordDesktopUrl.replace("http://", "https://");
+        desktopHttpChangeCount++;
+        keyword.urls().setFinalUrl(newKeywordDesktopUrl);
+      }
+    }
+    
+    Logger.log("---END SCRIPT---");
+    Logger.log("---START CHANGE LOG---");
+    Logger.log("Changed %s desktop urls and %s mobile urls in account %s", desktopHttpChangeCount, mobileHttpChangeCount, account.getName());
+    Logger.log("---END CHANGE LOG---");
+
+  }
+}
